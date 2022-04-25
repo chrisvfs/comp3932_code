@@ -1,0 +1,101 @@
+Installing KubeEdge on the RaspberryPi instructions
+
+Install Docker:
+sudo apt-get update
+sudo apt-get upgrade
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker sc18chvf
+
+Check Docker is installed:
+docker version
+
+#Enable Docker Daemon
+sudo chmod 666 /var/run/docker.sock
+
+sudo systemctl enable docker
+
+
+
+######## Kubernetes commands ########
+## SWAP ##
+# First disable swap
+sudo swapoff -a
+
+# disable and remove
+sudo dphys-swapfile swapoff
+sudo dphys-swapfile uninstall
+sudo update-rc.d dphys-swapfile remove
+sudo apt purge dphys-swapfile
+
+#reboot
+sudo reboot
+
+## kubelet driver different to docker ## (change to systemd?)
+sudo nano /etc/docker/daemon.json
+#Change to:
+{
+  "exec-opts": ["native.cgroupdriver=cgroupfs"]
+}
+#Run the following:
+systemctl daemon-reload
+# Add arg to /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+--cgroup-driver=systemd
+
+## Failed to get system container stats ##
+
+## Master Node Commands ##
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-cert-extra-sans=20.26.215.131 --control-plane-endpoint "20.26.215.131:6443"
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+
+# For node #
+
+b9d42f63fd0861be7a186eb7fdcacd9854363929248685bfdeeb10a5e7cf0269.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NTA1NDI5MDF9.Z0ZSdjdu3riEdq-sTdKh0xyx5fDHjlMPfcIm9RFSNig
+
+sudo kubeadm join 20.26.215.131:6443 --token 9rbeup.yyyft3rced3erx1q \
+	--discovery-token-ca-cert-hash sha256:ee9336a2699fc56f4a9a3bd3dfcd3441ba52366d56f9a7cbe3143d98d7a9070d
+
+# ERROR: Failed to create pod sandbox: open /run/systemd/resolve/resolv.conf: no such file or directory
+copy master's file to node :)
+
+# Docker build command for RaspberryPi (platform tag)
+pytest % docker build -t kem292/pyslimtest:1.1 -t kem292/pyslimtest:latest --platform=linux/arm64/v8 .
+docker build -t kem292/sensor:1.1 -t kem292/sensor:latest --platform=linux/arm64/v8 .
+
+
+######## Useful commands ######## 
+# View System logs in case Kubelet fails to start
+tail -f /var/log/syslog
+
+
+ssh -i .ssh/id_rsa sc18chvf@192.168.68.149
+
+######## Remote access
+# Azure VM
+
+
+#The password is your personal uni account password#
+ssh sc18chvf@remote-access.leeds.ac.uk
+#For pi
+ssh node1@129.11.28.74
+ssh master@129.11.28.75
+#Pass
+the pwd for the Pi node is dss@325 
+
+
+
+
+
+#Add to /run/flannel/subnet.env in worker nodes
+FLANNEL_NETWORK=10.244.0.0/16
+FLANNEL_SUBNET=10.244.0.1/24
+FLANNEL_MTU=1450
+FLANNEL_IPMASQ=true
+
+#Note of things to delete on external pi's
+#pip
